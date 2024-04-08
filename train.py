@@ -1,4 +1,5 @@
 import os
+import sys
 
 import torch
 from torch import nn
@@ -13,7 +14,7 @@ from src import MIR1K, E2E, cycle, summary, SAMPLE_RATE, FL
 from evaluate import evaluate
 
 
-def train(alpha, gamma):
+def train(alpha, gamma, dataset_dir):
     logdir = 'runs/Pitch_FL' + str(alpha) + '_' + str(gamma)
     seq_l = 2.55
 
@@ -24,9 +25,9 @@ def train(alpha, gamma):
     clip_grad_norm = 3
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    train_dataset = MIR1K('/cache/whj/dataset/MIR1K', hop_length, seq_l, ['train'])
+    train_dataset = MIR1K(dataset_dir, hop_length, seq_l, ['train'])
     print(len(train_dataset))
-    validation_dataset = MIR1K('/cache/whj/dataset/MIR1K', hop_length, None, ['test'])
+    validation_dataset = MIR1K(dataset_dir, hop_length, None, ['test'])
     print(len(validation_dataset))
 
     data_loader = DataLoader(train_dataset, batch_size, shuffle=True, drop_last=True)
@@ -102,8 +103,14 @@ def train(alpha, gamma):
 
 
 alpha_list = [6, 7, 8, 9, 10]
-for alpha in alpha_list:
-    print('' * 250)
-    print(alpha)
-    print('' * 250)
-    train(alpha, 0)
+if __name__ == '__main__':
+    if len(sys.argv) != 2:
+        print("Usage: python train.py <dataset_dir>")
+        sys.exit(1)
+    
+    dataset_dir = sys.argv[1]
+    for alpha in alpha_list:
+        print('' * 250)
+        print(alpha)
+        print('' * 250)
+        train(alpha, 0, dataset_dir)
