@@ -19,10 +19,14 @@ def bce(inputs, targets):
 
 
 def FL(inputs, targets, alpha, gamma):
-    loss = F.binary_cross_entropy(inputs, targets, reduce=False)
+    print("Inputs type:", type(inputs), " - Targets type:", type(targets))
+    assert isinstance(inputs, torch.Tensor), "Inputs must be a tensor"
+    assert isinstance(targets, torch.Tensor), "Targets must be a tensor"
+
+    loss = F.binary_cross_entropy(inputs, targets, reduction='none')
     weight = torch.ones(inputs.shape, dtype=torch.float).to(inputs.device)
     weight[targets == 1] = float(alpha)
-    loss_w = F.binary_cross_entropy(inputs, targets, weight=weight, reduce=False)
+    loss_w = F.binary_cross_entropy(inputs, targets, weight=weight, reduction='none')
     pt = torch.exp(-loss)
     weight_gamma = (1 - pt) ** gamma
     F_loss = torch.mean(weight_gamma * loss_w)

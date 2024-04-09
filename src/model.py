@@ -30,14 +30,8 @@ class E2E(nn.Module):
     def forward(self, x):
         mel = self.mel(x.reshape(-1, x.shape[-1])).transpose(-1, -2).unsqueeze(1)
         x = self.cnn(self.unet(mel)).transpose(1, 2).flatten(-2)
-        # x = self.fc(x)
-        hidden_vec = 0
-        if len(self.fc) == 4:
-            for i in range(len(self.fc)):
-                x = self.fc[i](x)
-                if i == 0:
-                    hidden_vec = x
-        return hidden_vec, x
+        x = self.fc(x)
+        return x
 
 
 class E2E0(nn.Module):

@@ -2,19 +2,21 @@
 #PBS -P RMVPE_Training
 #PBS -j oe
 #PBS -N RMVPE_Training
-#PBS -q volta_gpu
-#PBS -l select=1:ncpus=6:mem=60gb:ngpus=1
-#PBS -l walltime=24:00:00
+#PBS -q volta_login
+#PBS -l select=1:ncpus=6:mem=100gb:ngpus=1
+#PBS -l walltime=06:00:00
+LOG_FOLDER="$HOME/RMVPE/output"
+
 cd $PBS_O_WORKDIR
 np=$(cat ${PBS_NODEFILE} | wc -l)
 source /etc/profile.d/rec_modules.sh
 
 image="$HOME/0.0.11_latest.sif"
 
-singularity exec $image bash << EOF > stdout.$PBS_JOBID 2> stderr.$PBS_JOBID
+singularity exec $image bash << EOF > $LOG_FOLDER/stdout.$PBS_JOBID 2> $LOG_FOLDER/stderr.$PBS_JOBID
 python3 train.py $HOME/e0552366/MIR-1K
 EOF
 
-# singularity exec $image bash << EOF > stdout.$PBS_JOBID 2> stderr.$PBS_JOBID
+# singularity exec $image bash << EOF > /output/stdout.$PBS_JOBID 2> /output/stderr.$PBS_JOBID
 # python train.py $HOME/mir1k/MIR-1K
 # EOF

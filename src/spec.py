@@ -74,7 +74,7 @@ class MelSpectrogram(torch.nn.Module):
         super(MelSpectrogram, self).__init__()
         self.stft = STFT(filter_length, hop_length, win_length)
 
-        mel_basis = mel(sample_rate, filter_length, n_mels, mel_fmin, mel_fmax, htk=True)
+        mel_basis = mel(sr=sample_rate, n_fft=filter_length, n_mels=n_mels, fmin=mel_fmin, fmax=mel_fmax, htk=True)
         mel_basis = torch.from_numpy(mel_basis).float()
         self.register_buffer('mel_basis', mel_basis)
 
