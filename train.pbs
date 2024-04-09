@@ -9,10 +9,12 @@ cd $PBS_O_WORKDIR
 np=$(cat ${PBS_NODEFILE} | wc -l)
 source /etc/profile.d/rec_modules.sh
 
-image="/app1/common/singularity-img/3.0.0/pytorch_1.11_cuda_11.3_cudnn8-py38.sif"
+image="$HOME/0.0.11_latest.sif"
 
 singularity exec $image bash << EOF > stdout.$PBS_JOBID 2> stderr.$PBS_JOBID
-pip list
+python3 train.py $HOME/e0552366/MIR-1K
 EOF
 
+# singularity exec $image bash << EOF > stdout.$PBS_JOBID 2> stderr.$PBS_JOBID
 # python train.py $HOME/mir1k/MIR-1K
+# EOF

@@ -6,7 +6,7 @@ from torch import nn
 from torch.nn.utils import clip_grad_norm_
 from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
+# from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 import numpy as np
 
@@ -39,7 +39,7 @@ def train(alpha, gamma, dataset_dir):
     resume_iteration = None
 
     os.makedirs(logdir, exist_ok=True)
-    writer = SummaryWriter(logdir)
+    # writer = SummaryWriter(logdir)
 
     if resume_iteration is None:
         model = nn.DataParallel(E2E(int(hop_length / 1000 * SAMPLE_RATE), 4, 1, (2, 2))).to(device)
@@ -72,14 +72,14 @@ def train(alpha, gamma, dataset_dir):
             clip_grad_norm_(model.parameters(), clip_grad_norm)
         optimizer.step()
         scheduler.step()
-        writer.add_scalar('loss/loss_pitch', loss.item(), global_step=i)
+        # writer.add_scalar('loss/loss_pitch', loss.item(), global_step=i)
 
         if i % validation_interval == 0:
             model.eval()
             with torch.no_grad():
                 metrics = evaluate(validation_dataset, model.module, hop_length, device)
-                for key, value in metrics.items():
-                    writer.add_scalar('stage_pitch/' + key, np.mean(value), global_step=i)
+                # for key, value in metrics.items():
+                #     writer.add_scalar('stage_pitch/' + key, np.mean(value), global_step=i)
                 rpa = np.mean(metrics['RPA'])
                 rca = np.mean(metrics['RCA'])
                 oa = np.mean(metrics['OA'])
