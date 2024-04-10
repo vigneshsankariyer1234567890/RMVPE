@@ -6,6 +6,7 @@ import sys
 import time
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from multiprocessing import cpu_count, Pool
 import librosa
 import numpy as np
 import soundfile as sf
@@ -108,26 +109,25 @@ def process_pitchtxt_to_pv(pitchtxt_file_path: str, pv_file_path: str):
     
     print(f"Conversion completed and written to {pv_file_path}\n")
 
+def process_file_pair(audio: str, pitch: str, collection_dir: str, dataset_dir: str):
+    truncated_audio_path = audio[len(dataset_dir) + 1:].replace('/', '_')
+    truncated_pitch_path = pitch[len(dataset_dir) + 1:].replace('/', '_')
+
+    trunc_audio_path_as_wav = remove_suffix_and_append(truncated_audio_path, ".mp3", ".wav")
+    trunc_audio_path_as_wav_with_collection = os.path.join(collection_dir, trunc_audio_path_as_wav)
+    trunc_pitch_path_as_pv = remove_suffix_and_append(truncated_pitch_path, ".pitch.txt", ".pv")
+    trunc_pitch_path_as_pv_with_collection = os.path.join(collection_dir, trunc_pitch_path_as_pv)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        executor.submit(convert_mp3_to_wav, audio, trunc_audio_path_as_wav_with_collection)
+        executor.submit(process_pitchtxt_to_pv, pitch, trunc_pitch_path_as_pv_with_collection)
+
+    return (trunc_audio_path_as_wav_with_collection, trunc_pitch_path_as_pv_with_collection)
+
 def copy_to_collection_dir(collection_dir: str, audio_label_pairs: List[Tuple[str, str]], dataset_dir: str) -> List[Tuple[str]]:
-    new_audio_label_pairs = []
-    for audio, pitch in audio_label_pairs:
-        if not (audio.startswith(dataset_dir) and pitch.startswith(dataset_dir)):
-            raise ValueError("Paths do not start with the dataset directory.")
-
-        truncated_audio_path = audio[len(dataset_dir) + 1:].replace('/', '_')
-        truncated_pitch_path = pitch[len(dataset_dir) + 1:].replace('/', '_')
-
-        trunc_audio_path_as_wav = remove_suffix_and_append(truncated_audio_path, MP3_SUFFIX, WAV_SUFFIX)
-        trunc_audio_path_as_wav_with_collection = os.path.join(collection_dir, trunc_audio_path_as_wav)
-        convert_mp3_to_wav(audio, trunc_audio_path_as_wav_with_collection)
-
-        trunc_pitch_path_as_pv = remove_suffix_and_append(truncated_pitch_path, PITCH_TXT_SUFFIX, PV_SUFFIX)
-        trunc_pitch_path_as_pv_with_collection = os.path.join(collection_dir, trunc_pitch_path_as_pv)
-        process_pitchtxt_to_pv(pitch, trunc_pitch_path_as_pv_with_collection)
-
-        new_audio_label_pairs.append((trunc_audio_path_as_wav_with_collection, trunc_pitch_path_as_pv_with_collection))
-    
-    return new_audio_label_pairs
+    with Pool(cpu_count()) as pool:
+        results = pool.starmap(process_file_pair, [(audio, pitch, collection_dir, dataset_dir) for audio, pitch in audio_label_pairs])
+    return results
 
 def get_file_name(file_path: str) -> str:
     filename_with_extension = os.path.basename(file_path)
@@ -241,9 +241,11 @@ def pitch_pairs_collection_test(dataset_dir: str):
 
     start_time = time.time()
     pairs = collect_mp3_pitch_pairs(dataset_dir)
+    new_audio_label_pairs = copy_to_collection_dir(collection_dir, pairs, dataset_dir)
     elapsed_time = time.time() - start_time
     logging.info(f"collect_mp3_pitch_pairs executed in {elapsed_time:.2f} seconds.\n")
     logging.info(f"collected {len(pairs)} pairs of audio files\n")
+    logging.info(f"created {len(new_audio_label_pairs)} new pairs.\n")
 
     remove_directory(collection_dir)
 
