@@ -282,5 +282,6 @@ if __name__ == "__main__":
         sys.exit(1)
 
     dataset_dir = sys.argv[1]
-    pitch_pairs_collection_test(dataset_dir)
+    main(dataset_dir)
+    # pitch_pairs_collection_test(dataset_dir)
     # integration_test(dataset_dir)

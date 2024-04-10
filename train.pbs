@@ -2,9 +2,9 @@
 #PBS -P RMVPE_Training
 #PBS -j oe
 #PBS -N RMVPE_Training
-#PBS -q volta_login
-#PBS -l select=1:ncpus=6:mem=100gb:ngpus=1
-#PBS -l walltime=06:00:00
+#PBS -q parallel24
+#PBS -l select=1:ncpus=24:mem=50gb
+#PBS -l walltime=60:00:00
 LOG_FOLDER="$HOME/RMVPE/output"
 
 cd $PBS_O_WORKDIR
