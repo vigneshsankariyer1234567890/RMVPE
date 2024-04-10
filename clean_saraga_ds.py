@@ -26,9 +26,9 @@ def create_directory(base_path: str, directory_name: str) -> str:
 
     if not os.path.exists(full_path):
         os.makedirs(full_path)
-        print(f"Directory created: {full_path}")
+        print(f"Directory created: {full_path}\n")
     else:
-        print(f"Directory already exists: {full_path}")
+        print(f"Directory already exists: {full_path}\n")
     
     return full_path
 
@@ -90,7 +90,7 @@ def process_pitchtxt_to_pv(pitchtxt_file_path: str, pv_file_path: str):
 
             output_file.write(f"{formatted_time}\t{formatted_frequency}\n")
     
-    print(f"Conversion completed and written to {pv_file_path}")
+    print(f"Conversion completed and written to {pv_file_path}\n")
 
 def copy_to_collection_dir(collection_dir: str, audio_label_pairs: List[Tuple[str, str]], dataset_dir: str) -> List[Tuple[str]]:
     new_audio_label_pairs = []
@@ -203,23 +203,25 @@ def remove_directory(dir_path: str):
 def main(dataset_dir: str):
     collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
 
-    # audio_label_pairs = collect_mp3_pitch_pairs(dataset_dir)
+    audio_label_pairs = collect_mp3_pitch_pairs(dataset_dir)
 
-    # new_audio_label_pairs = copy_to_collection_dir(collection_dir, audio_label_pairs, dataset_dir)
+    new_audio_label_pairs = copy_to_collection_dir(collection_dir, audio_label_pairs, dataset_dir)
 
-    # collection_2_dir = create_directory(dataset_dir, COLLECTION_2_PATH)
+    collection_2_dir = create_directory(dataset_dir, COLLECTION_2_PATH)
 
-    # new_audio_list = []
-    # for audio_pitch_pair in new_audio_label_pairs:
-    #     segmented_list = segment_audio_pitch_pair(audio_pitch_pair, 10.0, collection_2_dir)
-    #     new_audio_list.extend(segmented_list)
+    new_audio_list = []
+    for audio_pitch_pair in new_audio_label_pairs:
+        segmented_list = segment_audio_pitch_pair(audio_pitch_pair, 10.0, collection_2_dir)
+        new_audio_list.extend(segmented_list)
 
-    # test_dir = create_directory(dataset_dir, TEST_SET_PATH)
-    # train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
-    # split_collections_data(new_audio_list, TEST_PROB, test_dir, train_dir)
-    # remove_directory(collection_dir)
-    # remove_directory(collection_2_dir)
-        
+    test_dir = create_directory(dataset_dir, TEST_SET_PATH)
+    train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
+    split_collections_data(new_audio_list, TEST_PROB, test_dir, train_dir)
+    remove_directory(collection_dir)
+    remove_directory(collection_2_dir)
+
+def integration_test(dataset_dir: str):
+    collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
 
     test_list = [('/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.mp3.mp3', '/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.pitch.txt')]
 
@@ -231,7 +233,6 @@ def main(dataset_dir: str):
     for audio_pitch_pair in new_audio_label_pairs:
         segmented_list = segment_audio_pitch_pair(audio_pitch_pair, 10.0, collection_2_dir)
         new_audio_list.extend(segmented_list)
-    
     test_dir = create_directory(dataset_dir, TEST_SET_PATH)
     train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
 
@@ -239,6 +240,12 @@ def main(dataset_dir: str):
 
     remove_directory(collection_dir)
     remove_directory(collection_2_dir)
+    assert(os.path.exists(test_dir) and os.path.isdir(test_dir))
+    print(f'Number of test files = {len(os.listdir(test_dir))}\n')
+    assert(os.path.exists(train_dir) and os.path.isdir(train_dir))
+    print(f'Number of train files = {len(os.listdir(train_dir))}\n')
+    remove_directory(test_dir)
+    remove_directory(train_dir)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -246,4 +253,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     dataset_dir = sys.argv[1]
-    main(dataset_dir)
+    integration_test(dataset_dir)
