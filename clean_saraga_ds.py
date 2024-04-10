@@ -1,4 +1,5 @@
 import os
+import random
 import shutil
 import sys
 
@@ -18,6 +19,7 @@ PV_SUFFIX = '.pv'
 
 TEST_SET_PATH = 'test'
 TRAIN_SET_PATH = 'train'
+TEST_PROB = 0.8
 
 def create_directory(base_path: str, directory_name: str) -> str:
     full_path = os.path.join(base_path, directory_name)
@@ -184,16 +186,18 @@ def segment_audio_pitch_pair(audio_pitch_pair: Tuple[str, str], segment_size: fl
 
     return list(zip(new_audio_files, new_pitch_files))
 
-def split_collections_data(file_pairs:List[Tuple[str, str]], ratio: int, test_dir: str, train_dir: str):
-    for i, pair in enumerate(file_pairs):
-        audio, pitch = pair
-
-        if i % (ratio + 1) == ratio:
+def split_collections_data(file_pairs:List[Tuple[str, str]], test_prob: float, test_dir: str, train_dir: str):
+    for audio, pitch in file_pairs:
+        if random.random() > test_prob:
             shutil.move(audio, os.path.join(test_dir, os.path.basename(audio)))
             shutil.move(pitch, os.path.join(test_dir, os.path.basename(pitch)))
         else:
             shutil.move(audio, os.path.join(train_dir, os.path.basename(audio)))
             shutil.move(pitch, os.path.join(train_dir, os.path.basename(pitch)))
+
+def remove_directory(dir_path: str):
+    if os.path.exists(dir_path):
+        shutil.rmtree(dir_path)
 
 
 def main(dataset_dir: str):
@@ -212,7 +216,9 @@ def main(dataset_dir: str):
 
     # test_dir = create_directory(dataset_dir, TEST_SET_PATH)
     # train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
-    # split_collections_data(new_audio_list, test_dir, train_dir)
+    # split_collections_data(new_audio_list, TEST_PROB, test_dir, train_dir)
+    # remove_directory(collection_dir)
+    # remove_directory(collection_2_dir)
         
 
     test_list = [('/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.mp3.mp3', '/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.pitch.txt')]
@@ -229,7 +235,10 @@ def main(dataset_dir: str):
     test_dir = create_directory(dataset_dir, TEST_SET_PATH)
     train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
 
-    split_collections_data(new_audio_list, 4, test_dir, train_dir)
+    split_collections_data(new_audio_list, TEST_PROB, test_dir, train_dir)
+
+    remove_directory(collection_dir)
+    remove_directory(collection_2_dir)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
