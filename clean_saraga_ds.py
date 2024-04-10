@@ -247,6 +247,3 @@ if __name__ == "__main__":
 
     dataset_dir = sys.argv[1]
     main(dataset_dir)
-
-
-
