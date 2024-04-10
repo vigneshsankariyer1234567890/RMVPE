@@ -1,16 +1,23 @@
 import os
+import shutil
 import sys
 
 import librosa
+import numpy as np
 import soundfile as sf
 from glob import glob
+from scipy.io import wavfile
 from typing import List, Tuple
 
 COLLECTION_PATH = 'collections'
+COLLECTION_2_PATH = 'collections_2'
 MP3_SUFFIX = '.mp3.mp3'
 PITCH_TXT_SUFFIX = '.pitch.txt'
 WAV_SUFFIX = '.wav'
 PV_SUFFIX = '.pv'
+
+TEST_SET_PATH = 'test'
+TRAIN_SET_PATH = 'train'
 
 def create_directory(base_path: str, directory_name: str) -> str:
     full_path = os.path.join(base_path, directory_name)
@@ -104,6 +111,90 @@ def copy_to_collection_dir(collection_dir: str, audio_label_pairs: List[Tuple[st
     
     return new_audio_label_pairs
 
+def get_file_name(file_path: str) -> str:
+    filename_with_extension = os.path.basename(file_path)
+    filename_without_extension, _ = os.path.splitext(filename_with_extension)
+    return filename_without_extension
+
+def get_formatted_file_name(prefix: str, file_name: str, identifier: str, extension: str) -> str:
+    return os.path.join(prefix, f'{file_name}_{identifier}{extension}')
+
+def segment_audio(audio_path: str, segment_size: float, push_to_dir: str) -> List[str]:
+    filename_without_extension = get_file_name(audio_path)
+    
+    sample_rate, data = wavfile.read(audio_path)
+    frames_per_segment = int(segment_size * sample_rate)
+    segmented_audio_paths = []
+
+    num_segments = (len(data) + frames_per_segment - 1) // frames_per_segment
+
+    for segment_idx in range(num_segments):
+        start = segment_idx * frames_per_segment
+        end = start + frames_per_segment
+        segment_data = data[start:end]
+        segment_audio_path = get_formatted_file_name(push_to_dir, filename_without_extension, str(segment_idx), WAV_SUFFIX)
+
+        wavfile.write(segment_audio_path, sample_rate, segment_data)
+
+        segmented_audio_paths.append(segment_audio_path)
+    
+    return segmented_audio_paths
+
+def segment_pitch(pitch_path: str, segment_size: float, push_to_dir: str) -> List[str]:
+    filename_without_extension = get_file_name(pitch_path)
+
+    segmented_pitch_paths = []
+    start_time = 0.0
+    segment_index = 0
+
+    with open(pitch_path, 'r') as file:
+        lines = file.readlines()
+    
+    while True:
+        segment_pitch_path = get_formatted_file_name(push_to_dir, filename_without_extension, str(segment_index), PV_SUFFIX)
+        segment_has_data = False
+
+        with open(segment_pitch_path, 'w') as spf:
+            for line in lines:
+                time_str, freq_str = line.strip().split()
+                time = float(time_str)
+                frequency = float(freq_str)
+                if start_time <= time < start_time + segment_size:
+                    spf.write(f"{frequency}\n")
+                    if not segment_has_data:
+                      segment_has_data = True
+                elif time >= start_time + segment_size:
+                    break
+        
+        if not segment_has_data:
+            os.remove(segment_pitch_path)
+            break
+        
+        segmented_pitch_paths.append(segment_pitch_path)
+        start_time += segment_size
+        segment_index += 1
+    
+    return segmented_pitch_paths    
+
+def segment_audio_pitch_pair(audio_pitch_pair: Tuple[str, str], segment_size: float, push_to_dir: str) -> List[Tuple[str, str]]:
+    audio, pitch = audio_pitch_pair
+
+    new_audio_files = segment_audio(audio, segment_size, push_to_dir)
+    new_pitch_files = segment_pitch(pitch, segment_size, push_to_dir)
+
+    return list(zip(new_audio_files, new_pitch_files))
+
+def split_collections_data(file_pairs:List[Tuple[str, str]], ratio: int, test_dir: str, train_dir: str):
+    for i, pair in enumerate(file_pairs):
+        audio, pitch = pair
+
+        if i % (ratio + 1) == ratio:
+            shutil.move(audio, os.path.join(test_dir, os.path.basename(audio)))
+            shutil.move(pitch, os.path.join(test_dir, os.path.basename(pitch)))
+        else:
+            shutil.move(audio, os.path.join(train_dir, os.path.basename(audio)))
+            shutil.move(pitch, os.path.join(train_dir, os.path.basename(pitch)))
+
 
 def main(dataset_dir: str):
     collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
@@ -112,13 +203,33 @@ def main(dataset_dir: str):
 
     # new_audio_label_pairs = copy_to_collection_dir(collection_dir, audio_label_pairs, dataset_dir)
 
+    # collection_2_dir = create_directory(dataset_dir, COLLECTION_2_PATH)
+
+    # new_audio_list = []
+    # for audio_pitch_pair in new_audio_label_pairs:
+    #     segmented_list = segment_audio_pitch_pair(audio_pitch_pair, 10.0, collection_2_dir)
+    #     new_audio_list.extend(segmented_list)
+
+    # test_dir = create_directory(dataset_dir, TEST_SET_PATH)
+    # train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
+    # split_collections_data(new_audio_list, test_dir, train_dir)
+        
+
     test_list = [('/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.mp3.mp3', '/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.pitch.txt')]
 
     new_audio_label_pairs = copy_to_collection_dir(collection_dir, test_list, dataset_dir)
 
-    for audio, pitch in new_audio_label_pairs:
-        print(f'New audio: {audio}\nNew pitch: {pitch}\n')
-        
+    collection_2_dir = create_directory(dataset_dir, COLLECTION_2_PATH)
+    
+    new_audio_list = []
+    for audio_pitch_pair in new_audio_label_pairs:
+        segmented_list = segment_audio_pitch_pair(audio_pitch_pair, 10.0, collection_2_dir)
+        new_audio_list.extend(segmented_list)
+    
+    test_dir = create_directory(dataset_dir, TEST_SET_PATH)
+    train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
+
+    split_collections_data(new_audio_list, 4, test_dir, train_dir)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
