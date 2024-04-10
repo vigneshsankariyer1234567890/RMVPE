@@ -1,8 +1,11 @@
+import logging
 import os
 import random
 import shutil
 import sys
+import time
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import librosa
 import numpy as np
 import soundfile as sf
@@ -21,6 +24,8 @@ TEST_SET_PATH = 'test'
 TRAIN_SET_PATH = 'train'
 TEST_PROB = 0.8
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 def create_directory(base_path: str, directory_name: str) -> str:
     full_path = os.path.join(base_path, directory_name)
 
@@ -35,23 +40,34 @@ def create_directory(base_path: str, directory_name: str) -> str:
 def check_files_exist(file_paths):
     return all(os.path.isfile(file_path) for file_path in file_paths)
 
+def process_song_directory(full_path: str) -> List[Tuple[str, str]]:
+    pair_list = []
+    audio_files = glob(os.path.join(full_path, '*' + MP3_SUFFIX))
+    label_files = [f.replace(MP3_SUFFIX, PITCH_TXT_SUFFIX) for f in audio_files]
+
+    if len(audio_files) == len(label_files) and \
+       check_files_exist(audio_files) and check_files_exist(label_files):
+        pair_list.extend(zip(audio_files, label_files))
+    
+    return pair_list
+
 def collect_mp3_pitch_pairs(base_path: str) -> List[Tuple[str, str]]:
     pair_list = []
+    directories = []
 
     for concert in os.listdir(base_path):
-        if os.path.isfile(os.path.join(base_path, concert)):
-            continue
-        for song in os.listdir(os.path.join(base_path, concert)):
-            full_path = os.path.join(base_path, concert, song)
+        concert_path = os.path.join(base_path, concert)
+        if os.path.isdir(concert_path):
+            for song in os.listdir(concert_path):
+                full_path = os.path.join(concert_path, song)
+                if os.path.isdir(full_path):
+                    directories.append(full_path)
 
-            audio_files = glob(os.path.join(full_path, '*' + MP3_SUFFIX))
-            label_files = [f.replace(MP3_SUFFIX, PITCH_TXT_SUFFIX) for f in audio_files]
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+        futures = [executor.submit(process_song_directory, dir_path) for dir_path in directories]
+        for future in as_completed(futures):
+            pair_list.extend(future.result())
 
-            if len(audio_files) == len(label_files) and \
-                check_files_exist(audio_files) and \
-                check_files_exist(label_files):
-                for pair in zip(audio_files, label_files):
-                    pair_list.append(pair)
     return pair_list
 
 def remove_suffix_and_append(file_path: str, suffix_to_remove: str, suffix_to_append: str) -> str:
@@ -220,6 +236,17 @@ def main(dataset_dir: str):
     remove_directory(collection_dir)
     remove_directory(collection_2_dir)
 
+def pitch_pairs_collection_test(dataset_dir: str):
+    collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
+
+    start_time = time.time()
+    pairs = collect_mp3_pitch_pairs(dataset_dir)
+    elapsed_time = time.time() - start_time
+    logging.info(f"collect_mp3_pitch_pairs executed in {elapsed_time:.2f} seconds.\n")
+    logging.info(f"collected {len(pairs)} pairs of audio files\n")
+
+    remove_directory(collection_dir)
+
 def integration_test(dataset_dir: str):
     collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
 
@@ -253,4 +280,5 @@ if __name__ == "__main__":
         sys.exit(1)
 
     dataset_dir = sys.argv[1]
-    integration_test(dataset_dir)
+    pitch_pairs_collection_test(dataset_dir)
+    # integration_test(dataset_dir)
