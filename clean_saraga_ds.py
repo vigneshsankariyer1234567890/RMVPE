@@ -28,6 +28,11 @@ TEST_PROB = 0.8
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def read_collections_directory(collections_dir: str) -> List[Tuple[str, str]]:
+    wav_files = glob(os.path.join(collections_dir, '*' + WAV_SUFFIX))
+    pv_files = [f.replace(WAV_SUFFIX, PV_SUFFIX) for f in wav_files]
+    return zip(wav_files, pv_files)
+
 def create_directory(base_path: str, directory_name: str) -> str:
     full_path = os.path.join(base_path, directory_name)
 
@@ -211,6 +216,13 @@ def segment_pitch(pitch_path: str, segment_size: float, push_to_dir: str) -> Lis
 def segment_audio_pitch_pair(audio_pitch_pair: Tuple[str, str], segment_size: float, push_to_dir: str) -> List[Tuple[str, str]]:
     audio, pitch = audio_pitch_pair
 
+    dir_path = os.path.dirname(audio)
+    parent_dir = os.path.dirname(dir_path)
+    new_audio_path = os.path.join(parent_dir, push_to_dir, get_file_name(audio))
+    detected_existing_files = glob(f'{new_audio_path}_*{WAV_SUFFIX}')
+    if len(detected_existing_files) > 0:
+        return []
+
     new_audio_files = segment_audio(audio, segment_size, push_to_dir)
     new_pitch_files = segment_pitch(pitch, segment_size, push_to_dir)
 
@@ -218,6 +230,8 @@ def segment_audio_pitch_pair(audio_pitch_pair: Tuple[str, str], segment_size: fl
 
 def split_collections_data(file_pairs:List[Tuple[str, str]], test_prob: float, test_dir: str, train_dir: str):
     for audio, pitch in file_pairs:
+        if not check_files_exist([audio]) or not check_files_exist([pitch]):
+            continue
         if random.random() > test_prob:
             shutil.move(audio, os.path.join(test_dir, os.path.basename(audio)))
             shutil.move(pitch, os.path.join(test_dir, os.path.basename(pitch)))
@@ -228,7 +242,6 @@ def split_collections_data(file_pairs:List[Tuple[str, str]], test_prob: float, t
 def remove_directory(dir_path: str):
     if os.path.exists(dir_path):
         shutil.rmtree(dir_path)
-
 
 def main(dataset_dir: str):
     collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
@@ -247,6 +260,30 @@ def main(dataset_dir: str):
     test_dir = create_directory(dataset_dir, TEST_SET_PATH)
     train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
     split_collections_data(new_audio_list, TEST_PROB, test_dir, train_dir)
+    remove_directory(collection_dir)
+    remove_directory(collection_2_dir)
+
+def copy_to_collection(dataset_dir: str):
+    collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
+    audio_label_pairs = collect_mp3_pitch_pairs(dataset_dir)
+    copy_to_collection_dir(collection_dir, audio_label_pairs, dataset_dir)
+
+def segment_audio_pitch(dataset_dir: str):
+    collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
+    new_audio_label_pairs = read_collections_directory(collection_dir)
+    collection_2_dir = create_directory(dataset_dir, COLLECTION_2_PATH)
+
+    with Pool(cpu_count()) as pool:
+        pool.starmap(segment_audio_pitch_pair, [(pair, 10.0, collection_2_dir) for pair in new_audio_label_pairs])
+
+def separate_into_test_train(dataset_dir: str):
+    collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
+    collection_2_dir = create_directory(dataset_dir, COLLECTION_2_PATH)
+    new_audio_label_pairs = read_collections_directory(collection_2_dir)
+
+    test_dir = create_directory(dataset_dir, TEST_SET_PATH)
+    train_dir = create_directory(dataset_dir, TRAIN_SET_PATH)
+    split_collections_data(new_audio_label_pairs, TEST_PROB, test_dir, train_dir)
     remove_directory(collection_dir)
     remove_directory(collection_2_dir)
 
@@ -296,6 +333,9 @@ if __name__ == "__main__":
         sys.exit(1)
 
     dataset_dir = sys.argv[1]
-    main(dataset_dir)
+    separate_into_test_train(dataset_dir)
+    # segment_audio_pitch(dataset_dir)
+    # copy_to_collection(dataset_dir)
+    # main(dataset_dir)
     # pitch_pairs_collection_test(dataset_dir)
     # integration_test(dataset_dir)
