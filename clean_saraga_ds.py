@@ -287,6 +287,23 @@ def separate_into_test_train(dataset_dir: str):
     remove_directory(collection_dir)
     remove_directory(collection_2_dir)
 
+def clean_test_train_directory(dir: str, ext_to_remove: str, ext_to_check: str):
+    files = glob(os.path.join(dir, '*' + ext_to_remove))
+    for file in files:
+        if not check_files_exist([os.path.join(dir, f'{get_file_name(file)}{ext_to_check}')]):
+            os.remove(file)
+
+def verify_integrity(dir: str):
+    wav_files = glob(os.path.join(dir, '*' + WAV_SUFFIX))
+    for file in wav_files:
+        if not check_files_exist([os.path.join(dir, f'{get_file_name(file)}{PV_SUFFIX}')]):
+            print(f'No corresponding PV file for {file}')
+
+    pitch_files = glob(os.path.join(dir, '*' + PV_SUFFIX))
+    for file in pitch_files:
+        if not check_files_exist([os.path.join(dir, f'{get_file_name(file)}{WAV_SUFFIX}')]):
+            print(f'No corresponding WAV file for {file}')
+
 def pitch_pairs_collection_test(dataset_dir: str):
     collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
 
