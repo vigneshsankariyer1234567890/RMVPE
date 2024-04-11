@@ -14,7 +14,7 @@ source /etc/profile.d/rec_modules.sh
 image="$HOME/0.0.11_latest.sif"
 
 singularity exec $image bash << EOF > $LOG_FOLDER/stdout.$PBS_JOBID 2> $LOG_FOLDER/stderr.$PBS_JOBID
-python3 train.py $HOME/e0552366/MIR-1K
+python3 train.py $HOME/e0552366/saraga1.5_carnatic
 EOF
 
 # singularity exec $image bash << EOF > /output/stdout.$PBS_JOBID 2> /output/stderr.$PBS_JOBID

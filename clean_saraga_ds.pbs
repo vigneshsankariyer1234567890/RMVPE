@@ -2,17 +2,23 @@
 #PBS -P RMVPE_CleanSaraga
 #PBS -j oe
 #PBS -N RMVPE_CleanSaraga
-#PBS -q parallel24
-#PBS -l select=1:ncpus=24:mem=50gb
+#PBS -q parallel12
+#PBS -l select=1:ncpus=12:mpiprocs=24:mem=30GB
 #PBS -l walltime=60:00:00
 LOG_FOLDER="$HOME/RMVPE/output"
 
 cd $PBS_O_WORKDIR
 np=$(cat ${PBS_NODEFILE} | wc -l)
+
 source /etc/profile.d/rec_modules.sh
+source /app1/ebenv
+module load Python/3.11.5-GCCcore-13.2.0
+module load singularity/3.8.3
 
 image="$HOME/0.0.11_latest.sif"
 
+# python clean_saraga_ds.py "$HOME/e0552366/saraga1.5_carnatic" > "$LOG_FOLDER/stdout.$PBS_JOBID" 2> "$LOG_FOLDER/stderr.$PBS_JOBID"
+
 singularity exec $image bash << EOF > $LOG_FOLDER/stdout.$PBS_JOBID 2> $LOG_FOLDER/stderr.$PBS_JOBID
-python3 clean_saraga_ds.py $HOME/e0552366/saraga1.5_carnatic
+python3 clean_saraga_ds.py "$HOME/e0552366/saraga1.5_carnatic"
 EOF

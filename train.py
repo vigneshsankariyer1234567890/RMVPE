@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 
-from src import MIR1K, E2E, cycle, summary, SAMPLE_RATE, FL
+from src import E2E, cycle, summary, SAMPLE_RATE, FL, SARAGA_CARNATIC
 from evaluate import evaluate
 
 
@@ -25,9 +25,9 @@ def train(alpha, gamma, dataset_dir):
     clip_grad_norm = 3
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    train_dataset = MIR1K(dataset_dir, hop_length, seq_l, ['train'])
+    train_dataset = SARAGA_CARNATIC(dataset_dir, hop_length, seq_l, ['train'])
     print(len(train_dataset))
-    validation_dataset = MIR1K(dataset_dir, hop_length, None, ['test'])
+    validation_dataset = SARAGA_CARNATIC(dataset_dir, hop_length, None, ['test'])
     print(len(validation_dataset))
 
     data_loader = DataLoader(train_dataset, batch_size, shuffle=True, drop_last=True)

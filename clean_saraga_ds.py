@@ -16,7 +16,8 @@ from typing import List, Tuple
 
 COLLECTION_PATH = 'collections'
 COLLECTION_2_PATH = 'collections_2'
-MP3_SUFFIX = '.mp3.mp3'
+MP3_MP3_SUFFIX = '.mp3.mp3'
+MP3_SUFFIX = '.mp3'
 PITCH_TXT_SUFFIX = '.pitch.txt'
 WAV_SUFFIX = '.wav'
 PV_SUFFIX = '.pv'
@@ -43,12 +44,22 @@ def check_files_exist(file_paths):
 
 def process_song_directory(full_path: str) -> List[Tuple[str, str]]:
     pair_list = []
-    audio_files = glob(os.path.join(full_path, '*' + MP3_SUFFIX))
-    label_files = [f.replace(MP3_SUFFIX, PITCH_TXT_SUFFIX) for f in audio_files]
+    audio_mp3_mp3_files = glob(os.path.join(full_path, '*' + MP3_MP3_SUFFIX))
+    label_mp3_mp3_files = [f.replace(MP3_MP3_SUFFIX, PITCH_TXT_SUFFIX) for f in audio_mp3_mp3_files]
 
-    if len(audio_files) == len(label_files) and \
-       check_files_exist(audio_files) and check_files_exist(label_files):
-        pair_list.extend(zip(audio_files, label_files))
+    if len(audio_mp3_mp3_files) == len(label_mp3_mp3_files) and \
+       check_files_exist(audio_mp3_mp3_files) and check_files_exist(label_mp3_mp3_files):
+        pair_list.extend(zip(audio_mp3_mp3_files, label_mp3_mp3_files))
+    
+    audio_mp3_files = glob(os.path.join(full_path, '*' + MP3_SUFFIX))
+    label_mp3_files = [f.replace(MP3_SUFFIX, PITCH_TXT_SUFFIX) for f in audio_mp3_files]
+
+    if len(audio_mp3_files) == len(label_mp3_files) and \
+       check_files_exist(audio_mp3_files) and check_files_exist(label_mp3_files):
+        pair_list.extend(zip(audio_mp3_files, label_mp3_files))
+
+    for audio, pitch in pair_list:
+        print(f"Audio: {audio}, Pitch: {pitch}")
     
     return pair_list
 
@@ -113,9 +124,12 @@ def process_file_pair(audio: str, pitch: str, collection_dir: str, dataset_dir: 
     truncated_audio_path = audio[len(dataset_dir) + 1:].replace('/', '_')
     truncated_pitch_path = pitch[len(dataset_dir) + 1:].replace('/', '_')
 
-    trunc_audio_path_as_wav = remove_suffix_and_append(truncated_audio_path, ".mp3", ".wav")
+    if truncated_audio_path.endswith(MP3_MP3_SUFFIX):
+        trunc_audio_path_as_wav = remove_suffix_and_append(truncated_audio_path, MP3_MP3_SUFFIX, WAV_SUFFIX)
+    else:
+        trunc_audio_path_as_wav = remove_suffix_and_append(truncated_audio_path, MP3_SUFFIX, WAV_SUFFIX)
     trunc_audio_path_as_wav_with_collection = os.path.join(collection_dir, trunc_audio_path_as_wav)
-    trunc_pitch_path_as_pv = remove_suffix_and_append(truncated_pitch_path, ".pitch.txt", ".pv")
+    trunc_pitch_path_as_pv = remove_suffix_and_append(truncated_pitch_path, PITCH_TXT_SUFFIX, PV_SUFFIX)
     trunc_pitch_path_as_pv_with_collection = os.path.join(collection_dir, trunc_pitch_path_as_pv)
 
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -252,7 +266,7 @@ def pitch_pairs_collection_test(dataset_dir: str):
 def integration_test(dataset_dir: str):
     collection_dir = create_directory(dataset_dir, COLLECTION_PATH)
 
-    test_list = [('/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.mp3.mp3', '/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.pitch.txt')]
+    test_list = [('/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.mp3.mp3', '/home/svu/e0552366/e0552366/saraga1.5_carnatic/Akkarai Sisters at Arkay by Akkarai Sisters/Apparama Bhakti/Apparama Bhakti.pitch.txt'), ('/home/svu/e0552366/e0552366/saraga1.5_carnatic/Ashwath Narayanan at Arkay by Ashwath Narayanan/Angakaram/Ashwath Narayanan - Angakaram.mp3', '/home/svu/e0552366/e0552366/saraga1.5_carnatic/Ashwath Narayanan at Arkay by Ashwath Narayanan/Angakaram/Ashwath Narayanan - Angakaram.pitch.txt')]
 
     new_audio_label_pairs = copy_to_collection_dir(collection_dir, test_list, dataset_dir)
 
