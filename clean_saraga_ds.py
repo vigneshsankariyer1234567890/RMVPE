@@ -343,16 +343,3 @@ def integration_test(dataset_dir: str):
     print(f'Number of train files = {len(os.listdir(train_dir))}\n')
     remove_directory(test_dir)
     remove_directory(train_dir)
-
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python clean_ds.py <dataset_dir>")
-        sys.exit(1)
-
-    dataset_dir = sys.argv[1]
-    separate_into_test_train(dataset_dir)
-    # segment_audio_pitch(dataset_dir)
-    # copy_to_collection(dataset_dir)
-    # main(dataset_dir)
-    # pitch_pairs_collection_test(dataset_dir)
-    # integration_test(dataset_dir)
