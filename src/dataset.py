@@ -1,4 +1,5 @@
 import os
+import sys
 import librosa
 import numpy as np
 import torch
@@ -10,7 +11,7 @@ import pandas as pd
 from .constants import *
 
 class SARAGA_CARNATIC(Dataset):
-    def __init__(self, path, hop_length, sequence_length=None, groups=None, sample_rate=CARNATIC_SAMPLE_RATE, window_length=WINDOW_LENGTH):
+    def __init__(self, path, hop_length, sequence_length=None, groups=None, sample_rate=CARNATIC_SAMPLE_RATE, window_length=WINDOW_LENGTH, freq_hop_length=CARNATIC_FREQ_HOP_LENGTH):
         self.path = path
         self.SAMPLE_RATE = sample_rate
         self.WINDOW_LENGTH = window_length
@@ -18,6 +19,7 @@ class SARAGA_CARNATIC(Dataset):
         self.SEQ_LEN = None if not sequence_length else int(sequence_length * self.SAMPLE_RATE)
         self.num_class = N_CLASS
         self.data = []
+        self.FREQ_HOP_LENGTH = int(freq_hop_length / 1000 * self.SAMPLE_RATE)
 
         print(f"Loading {len(groups)} group{'s' if len(groups) > 1 else ''} "
               f"of {self.__class__.__name__} at {path}")
@@ -53,6 +55,8 @@ class SARAGA_CARNATIC(Dataset):
         audio = torch.from_numpy(audio).float()
 
         audio_steps = audio_l // self.HOP_LENGTH + 1
+        freq_per_hop = self.HOP_LENGTH // self.FREQ_HOP_LENGTH
+        print(f"Audio_l: {audio_l}, self.HOP_LENGTH: {self.HOP_LENGTH}, audio_steps: {audio_steps}, freq_per_hop: {freq_per_hop}", file=sys.stderr)
 
         # Pitch label: processed F0 value. A matrix of audio_steps height and 360 width (the classes)
         pitch_label = torch.zeros(audio_steps, self.num_class, dtype=torch.float)
@@ -60,20 +64,31 @@ class SARAGA_CARNATIC(Dataset):
         voice_label = torch.zeros(audio_steps, dtype=torch.float)
         with open(label_path, 'r') as f:
             lines = f.readlines()
-            i = 0
+            current_sum = 0
+            count = 0
+            j = 0
             for line in lines:
-                i += 1
-                if float(line) != 0:
-                    # Get the frequency from the pitch label
-                    freq =float(line)
-                    # Get the cent value (against BASE_CENT_FREQ)
-                    cent = 1200 * np.log2(freq/BASE_CENT_FREQ)
-                    # Normalize cent and get the right bucket
-                    index = int(round((cent-CONST)/20))
-                    # Mark bucket in segment of pitch as 1
-                    pitch_label[i][index] = 1
-                    # Mark segment in voice as 1
-                    voice_label[i] = 1
+                # We take the average freq in every hop. SARAGA dataset has a freq hop length
+                # of 4ms, which is too fine for use.
+                current_sum += float(line)
+                count += 1
+
+                if count == freq_per_hop:
+                    avg_freq = current_sum / freq_per_hop
+                    if avg_freq != 0:
+                        cent = 1200 * np.log2(avg_freq/BASE_CENT_FREQ)
+                        index = int(round((cent-CONST)/20))
+                        print(f"Average freq for hop {j} of file {label_path}: {avg_freq} (index: {index})", file=sys.stderr)
+                        if j < audio_steps:
+                            try:
+                                pitch_label[j][index] = 1
+                                voice_label[j] = 1
+                            except IndexError:
+                                print(f"IndexError with freq {avg_freq}, index {index}, j {j} in file {label_path}", file=sys.stderr)
+                                sys.exit(1)
+                    j += 1
+                    current_sum = 0
+                    count = 0
         
         if self.SEQ_LEN is not None:
             n_steps = self.SEQ_LEN // self.HOP_LENGTH + 1
