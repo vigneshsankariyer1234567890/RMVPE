@@ -64,7 +64,7 @@ def train(alpha, gamma, dataset_dir):
         try:
             loss = FL(pitch_pred, pitch_label, alpha, gamma)
         except ValueError as e:
-            print(f'Mismatch in pitch_pred and pitch with error: {e} in file {data['file']}', sys.stderr)
+            print(f"Mismatch in pitch_pred and pitch with error: {e} in file {data['file']}", file=sys.stderr)
             sys.exit(1)
 
         print(i, end='\t')
