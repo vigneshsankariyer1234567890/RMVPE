@@ -78,7 +78,7 @@ class SARAGA_CARNATIC(Dataset):
                     if avg_freq != 0:
                         cent = 1200 * np.log2(avg_freq/BASE_CENT_FREQ)
                         index = int(round((cent-CONST)/20))
-                        print(f"Average freq for hop {j} of file {label_path}: {avg_freq} (index: {index})", file=sys.stderr)
+                        # print(f"Average freq for hop {j} of file {label_path}: {avg_freq} (index: {index})", file=sys.stderr)
                         if j < audio_steps:
                             try:
                                 pitch_label[j][index] = 1

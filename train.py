@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 
-from src import E2E, cycle, summary, SAMPLE_RATE, FL, SARAGA_CARNATIC
+from src import E2E, cycle, summary, FL, SARAGA_CARNATIC, CARNATIC_SAMPLE_RATE
 from evaluate import evaluate
 
 
@@ -42,7 +42,7 @@ def train(alpha, gamma, dataset_dir):
     # writer = SummaryWriter(logdir)
 
     if resume_iteration is None:
-        model = nn.DataParallel(E2E(int(hop_length / 1000 * SAMPLE_RATE), 4, 1, (2, 2))).to(device)
+        model = nn.DataParallel(E2E(int(hop_length / 1000 * CARNATIC_SAMPLE_RATE), 4, 1, (2, 2))).to(device)
         optimizer = torch.optim.Adam(model.parameters(), learning_rate)
         resume_iteration = 0
     else:
@@ -61,7 +61,11 @@ def train(alpha, gamma, dataset_dir):
         audio = data['audio'].to(device)
         pitch_label = data['pitch'].to(device)
         pitch_pred = model(audio)
-        loss = FL(pitch_pred, pitch_label, alpha, gamma)
+        try:
+            loss = FL(pitch_pred, pitch_label, alpha, gamma)
+        except ValueError as e:
+            print(f'Mismatch in pitch_pred and pitch with error: {e} in file {data['file']}', sys.stderr)
+            sys.exit(1)
 
         print(i, end='\t')
         print('loss_total:', loss.item())
