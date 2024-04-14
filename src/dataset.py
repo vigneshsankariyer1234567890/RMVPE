@@ -91,32 +91,38 @@ class SARAGA_CARNATIC(Dataset):
                     count = 0
         
         if self.SEQ_LEN is not None:
-            n_steps = self.SEQ_LEN // self.HOP_LENGTH + 1
-            for i in range(audio_l // self.SEQ_LEN):
-                begin_t = i * self.SEQ_LEN
-                end_t = begin_t + self.SEQ_LEN + self.WINDOW_LENGTH
+            segment_length = self.SEQ_LEN + self.WINDOW_LENGTH
+            step_size = self.SEQ_LEN
+            num_segments = (len(audio) - self.WINDOW_LENGTH) // step_size
+            for i in range(num_segments + 1):
+                begin_t = i * step_size
+                end_t = begin_t + segment_length
+                if end_t > len(audio):
+                    end_t = len(audio)
+                    begin_t = max(0, end_t - segment_length)
+                segment = audio[begin_t:end_t]
+                if len(segment) < segment_length:
+                    segment = torch.nn.functional.pad(segment, (0, segment_length - len(segment)), 'constant', 0)
+                
                 begin_step = begin_t // self.HOP_LENGTH
-                end_step = begin_step + n_steps
-                data.append(dict(
-                    audio=audio[begin_t:end_t], 
-                    pitch=pitch_label[begin_step:end_step],
-                    voice=voice_label[begin_step:end_step],
-                    file=audio_path
-                ))
+                end_step = end_t // self.HOP_LENGTH
+                pitch_segment = pitch_label[begin_step:end_step]
+                voice_segment = voice_label[begin_step:end_step]
 
-            data.append(dict(
-                audio=audio[-self.SEQ_LEN - self.WINDOW_LENGTH:],
-                pitch=pitch_label[-n_steps:],
-                voice=voice_label[-n_steps:],
-                file=audio_path
-            ))
+                data.append({
+                    'audio': segment,
+                    'pitch': pitch_segment,
+                    'voice': voice_segment,
+                    'file': audio_path
+                })
         else:
-            data.append(dict(
-                audio=audio,
-                pitch=pitch_label,
-                voice=voice_label,
-                file=audio_path
-            ))
+            data.append({
+                'audio': audio,
+                'pitch': pitch_label,
+                'voice': voice_label,
+                'file': audio_path
+            })
+
         return data
 
 class MIR1K(Dataset):
