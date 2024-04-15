@@ -81,7 +81,9 @@ class ResDecoderBlock(nn.Module):
             self.conv2.append(ConvBlockRes(out_channels, out_channels, momentum))
 
     def forward(self, x, concat_tensor):
+        print(f"Before upsampling - x: {x.shape}, concat_tensor: {concat_tensor.shape}")
         x = self.conv1(x)
+        print(f"After upsampling - x: {x.shape}, concat_tensor: {concat_tensor.shape}")
         x = torch.cat((x, concat_tensor), dim=1)
         for i in range(self.n_blocks):
             x = self.conv2[i](x)
@@ -140,7 +142,9 @@ class Decoder(nn.Module):
 
     def forward(self, x, concat_tensors):
         for i in range(self.n_decoders):
-            x = self.layers[i](x, concat_tensors[-1-i])
+            concat_tensor = concat_tensors[-1-i]
+            print(f"Decoder layer {i} - x: {x.shape}, concat_tensor: {concat_tensor.shape}")
+            x = self.layers[i](x, concat_tensor)
         return x
 
 
@@ -167,10 +171,15 @@ class DeepUnet(nn.Module):
         self.decoder = Decoder(self.encoder.out_channel, en_de_layers, kernel_size, n_blocks)
 
     def forward(self, x):
+        print(f"Before Encoder - x: {x.shape}")
         x, concat_tensors = self.encoder(x)
+        print(f"After Encoder - x: {x.shape}, concat_tensors shapes: {[t.shape for t in concat_tensors]}")
         x = self.intermediate(x)
+        print(f"After Intermediate - x: {x.shape}")
         concat_tensors = self.tf(concat_tensors)
+        print(f"After Timbre Filter - concat_tensors shapes: {[t.shape for t in concat_tensors]}")
         x = self.decoder(x, concat_tensors)
+        print(f"After Decoder - x: {x.shape}")
         return x
 
       
