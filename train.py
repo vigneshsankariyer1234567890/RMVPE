@@ -16,7 +16,7 @@ from evaluate import evaluate
 
 def train(alpha, gamma, dataset_dir):
     logdir = 'runs/Pitch_FL' + str(alpha) + '_' + str(gamma)
-    seq_l = 2.55
+    seq_l = 2.52
 
     hop_length = 20
 
@@ -61,6 +61,7 @@ def train(alpha, gamma, dataset_dir):
         audio = data['audio'].to(device)
         pitch_label = data['pitch'].to(device)
         pitch_pred = model(audio)
+        print(f"pitch_pred size: {pitch_pred.size()}, pitch_label size: {pitch_label.size()}")
         try:
             loss = FL(pitch_pred, pitch_label, alpha, gamma)
         except ValueError as e:

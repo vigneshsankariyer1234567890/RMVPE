@@ -3,6 +3,7 @@ import sys
 import librosa
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -105,9 +106,18 @@ class SARAGA_CARNATIC(Dataset):
                     segment = torch.nn.functional.pad(segment, (0, segment_length - len(segment)), 'constant', 0)
                 
                 begin_step = begin_t // self.HOP_LENGTH
-                end_step = end_t // self.HOP_LENGTH
+                end_step = min((begin_t + segment_length) // self.HOP_LENGTH, len(pitch_label))
                 pitch_segment = pitch_label[begin_step:end_step]
                 voice_segment = voice_label[begin_step:end_step]
+                expected_length = segment_length // self.HOP_LENGTH
+
+                missing_frames = expected_length - len(pitch_segment)
+                if missing_frames > 0:
+                    # Pad the missing frames at the end of the sequence dimension
+                    pitch_segment = F.pad(pitch_segment, (0, 0, 0, missing_frames), 'constant', 0)
+                    voice_segment = F.pad(voice_segment, (0, missing_frames), 'constant', 0)
+                
+                print(f"expected_length: {expected_length}, file: {audio_path}_segment{i}, audio_segment dimension: {len(segment)}, pitch_segment dimension: {len(pitch_segment)}x{len(pitch_segment[0])}, voice_segment len: {len(voice_segment)}", file=sys.stderr)
 
                 data.append({
                     'audio': segment,
