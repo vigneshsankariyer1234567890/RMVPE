@@ -28,9 +28,7 @@ class E2E(nn.Module):
             )
 
     def forward(self, x):
-        print(f"Before Mel - x: {x.shape}")
         mel = self.mel(x.reshape(-1, x.shape[-1])).transpose(-1, -2).unsqueeze(1)
-        print(f"After Mel and before UNet - mel: {mel.shape}")
         x = self.cnn(self.unet(mel)).transpose(1, 2).flatten(-2)
         x = self.fc(x)
         return x

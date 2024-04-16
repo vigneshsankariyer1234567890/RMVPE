@@ -10,13 +10,13 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import numpy as np
 
-from src import E2E, cycle, summary, FL, SARAGA_CARNATIC, CARNATIC_SAMPLE_RATE
+from src import E2E, cycle, summary, FL, SARAGA_CARNATIC, CARNATIC_SAMPLE_RATE, symmetric_pad_predictions
 from evaluate import evaluate
 
 
 def train(alpha, gamma, dataset_dir):
     logdir = 'runs/Pitch_FL' + str(alpha) + '_' + str(gamma)
-    seq_l = 2.52
+    seq_l = 2.54
 
     hop_length = 20
 
@@ -61,6 +61,8 @@ def train(alpha, gamma, dataset_dir):
         audio = data['audio'].to(device)
         pitch_label = data['pitch'].to(device)
         pitch_pred = model(audio)
+        if pitch_pred.size(1) != pitch_label.size(1):
+            pitch_pred = symmetric_pad_predictions(pitch_pred, pitch_label.size(1))
         print(f"pitch_pred size: {pitch_pred.size()}, pitch_label size: {pitch_label.size()}")
         try:
             loss = FL(pitch_pred, pitch_label, alpha, gamma)

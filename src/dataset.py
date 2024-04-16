@@ -4,6 +4,7 @@ import librosa
 import numpy as np
 import torch
 import torch.nn.functional as F
+import math
 
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -93,6 +94,7 @@ class SARAGA_CARNATIC(Dataset):
         
         if self.SEQ_LEN is not None:
             segment_length = self.SEQ_LEN + self.WINDOW_LENGTH
+            expected_length = math.ceil(segment_length / self.HOP_LENGTH)
             step_size = self.SEQ_LEN
             num_segments = (len(audio) - self.WINDOW_LENGTH) // step_size
             for i in range(num_segments + 1):
@@ -109,7 +111,6 @@ class SARAGA_CARNATIC(Dataset):
                 end_step = min((begin_t + segment_length) // self.HOP_LENGTH, len(pitch_label))
                 pitch_segment = pitch_label[begin_step:end_step]
                 voice_segment = voice_label[begin_step:end_step]
-                expected_length = segment_length // self.HOP_LENGTH
 
                 missing_frames = expected_length - len(pitch_segment)
                 if missing_frames > 0:

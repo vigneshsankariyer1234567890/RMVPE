@@ -1,10 +1,21 @@
 import sys
 from functools import reduce
 import numpy as np
-
+import torch.nn.functional as F
 
 from torch.nn.modules.module import _addindent
 
+def symmetric_pad_predictions(predictions, target_length):
+    current_length = predictions.size(1)
+    total_padding = target_length - current_length
+    pad_before = total_padding // 2
+    pad_after = total_padding - pad_before
+
+    padded_predictions = F.pad(predictions,
+                              (0, 0, pad_before, pad_after),
+                              mode='replicate')
+    
+    return padded_predictions
 
 def cycle(iterable):
     while True:
