@@ -3,7 +3,7 @@ import torch
 from tqdm import tqdm
 
 from collections import defaultdict
-from src import to_local_average_cents, bce, SAMPLE_RATE, WINDOW_LENGTH
+from src import to_local_average_cents, bce, SAMPLE_RATE, WINDOW_LENGTH, CARNATIC_SAMPLE_RATE
 from mir_eval.melody import raw_pitch_accuracy, to_cent_voicing, raw_chroma_accuracy, overall_accuracy
 from mir_eval.melody import voicing_recall, voicing_false_alarm
 import torch.nn.functional as F
@@ -18,8 +18,8 @@ def evaluate(dataset, model, hop_length, device, pitch_th=0.0):
         slices = range(0, pitch_pred.shape[0], 128)
         for start_steps in slices:
             end_steps = start_steps + 127
-            start = int(start_steps * hop_length * SAMPLE_RATE / 1000)
-            end = int(end_steps * hop_length * SAMPLE_RATE / 1000) + WINDOW_LENGTH
+            start = int(start_steps * hop_length * CARNATIC_SAMPLE_RATE / 1000)
+            end = int(end_steps * hop_length * CARNATIC_SAMPLE_RATE / 1000) + WINDOW_LENGTH
             if end_steps >= pitch_pred.shape[0]:
                 t_audio = F.pad(audio[start:end], (0, end - start - len(audio[start:end])), mode='constant')
                 t_pitch_pred = model(t_audio.reshape((-1, t_audio.shape[-1]))).squeeze(0)
